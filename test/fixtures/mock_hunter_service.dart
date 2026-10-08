@@ -1,5 +1,5 @@
-import '../models/match_record.dart';
-import '../models/player_profile.dart';
+import 'package:hunt/models/match_record.dart';
+import 'package:hunt/models/player_profile.dart';
 
 /// Deterministic local data for developing the responsive history screens.
 class MockHunterService {

@@ -39,7 +39,7 @@ class MatchRecord {
   final int bountyExtracted;
   final int mmr;
   @JsonKey(name: 'mmr_stars')
-  final int mmrStars;
+  final int? mmrStars;
   @JsonKey(name: 'mmr_change')
   final int mmrChange;
 

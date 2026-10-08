@@ -17,7 +17,7 @@ MatchRecord _$MatchRecordFromJson(Map<String, dynamic> json) => MatchRecord(
   teamWipes: (json['team_wipes'] as num).toInt(),
   bountyExtracted: (json['bounty_extracted'] as num).toInt(),
   mmr: (json['mmr'] as num).toInt(),
-  mmrStars: (json['mmr_stars'] as num).toInt(),
+  mmrStars: (json['mmr_stars'] as num?)?.toInt(),
   mmrChange: (json['mmr_change'] as num).toInt(),
 );
 
