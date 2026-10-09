@@ -35,6 +35,8 @@
     <!-- 同局遭遇玩家 1 (另一名敌方玩家) -->
     <Attr name="MissionBagPlayer_0_1_name" value="BayouGhost_99" />
     <Attr name="MissionBagPlayer_0_1_mmr" value="2910" />
+
+    
     <Attr name="MissionBagPlayer_0_1_downed_by_me" value="1" />
     <Attr name="MissionBagPlayer_0_1_killed_by_me" value="1" />
     <Attr name="MissionBagPlayer_0_1_downed_me" value="0" />

@@ -1,5 +1,21 @@
 # Steam 登录接入
 
+## 浏览器请求 403：Invalid CORS request
+
+本地已复现：不带 Origin 请求登录 URL 返回 200，带 localhost 网页 Origin 的 GET/OPTIONS 返回 403。需在后端 CORS 配置放行实际前端 Origin（包含端口），测试工具成功不代表浏览器跨域已获允许。
+
+建议固定 Web 端口：
+
+```sh
+flutter run -d chrome --web-hostname localhost --web-port 3000 --dart-define=API_BASE_URL=http://localhost:8080/api/v1
+```
+
+后端应允许来源 `http://localhost:3000`，方法 GET/OPTIONS，请求头 Authorization/Content-Type/Accept，并使 CORS 在鉴权之前处理 OPTIONS。若同时使用 127.0.0.1，需额外允许 `http://127.0.0.1:3000`。登录链接接口依赖状态 Cookie，必须返回 Access-Control-Allow-Credentials: true，并指定确切的 Allow-Origin（不能为 *）。
+
+Spring Security 后端应在实际 SecurityFilterChain 启用 `http.cors(...)`，让它使用对应的 CorsConfigurationSource；仅放行 URL 的 permitAll 不能解决 CORS 拒绝。修改后重启后端，确认 GET 返回正确的 Access-Control-Allow-Origin 且 OPTIONS 成功。部署环境应使用确切的生产域名。
+
+前端公开登录接口已禁止附加缓存 Token；受保护接口仍附加 Bearer Token，因此后端仍需支持带 Authorization 的预检请求。
+
 实现以 `api_contract.md` 为准，使用后端签发的 Bearer Token。客户端不携带 Steam API Key，不把 SteamID64 当作认证凭证。
 
 ## 启动与部署
@@ -53,3 +69,13 @@ Windows 主机如提示插件 symlink 不可用，需在 Windows 设置中启用
 - 会话验证成功后才由 profile/match providers 拉取资料和战绩，资料请求失败不会改变已验证的登录身份。
 - Web 处理首屏 /auth/callback、浏览器 popstate 和 Flutter RouteInformation。回调后清除地址栏 token/steam_id。
 - 页面资料、战绩和加载更多均有进度指示器；失败时提供暗色金字重试按钮。
+
+## 状态 Cookie 与后端 OpenID 回调 401
+
+登录链接请求已使用 Dio Options.extra['withCredentials']=true。浏览器保存 HttpOnly 状态 Cookie，控制器等待请求完成后再跳转 Steam，无需手动读取 Cookie。
+
+本地实测 Cookie 为 hunt_steam_state，Path=/api/v1/auth/steam，Secure，HttpOnly，SameSite=Lax；Steam 返回 http://localhost:8080/api/v1/auth/steam/callback。登录请求和后端回调需使用同一主机，避免混用 localhost 与 127.0.0.1。Lax 适用于顶层 GET 回跳；Secure 在 localhost 的例外取决于浏览器，普通 HTTP 局域网地址请使用 HTTPS 或调整仅限开发环境的 Cookie 设置。
+
+排查时检查浏览器 Network 的 login-url 响应 Set-Cookie 是否被阻止、Application 中是否保存 hunt_steam_state、Steam 回跳后端时请求 Cookie 是否携带它。Cookie 已携带仍 401，则检查后端 state/nonce/过期、OpenID 验签和回调路由鉴权。后端回调发生在 Flutter /auth/callback 收到最终 Token 之前。
+
+Mobile 原生 Dio 和系统浏览器不共享 Cookie。若 mobile 后端同样依赖状态 Cookie，应提供在外部浏览器设置 Cookie 后 302 跳转 Steam 的起始端点，并同步调整前端允许的跳转地址；withCredentials 只解决 Web 的浏览器请求，不能打通原生与浏览器 Cookie 存储。

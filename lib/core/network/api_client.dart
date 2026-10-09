@@ -50,9 +50,13 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           try {
-            final token = await this.store.readToken();
-            if (token != null && token.isNotEmpty) {
-              options.headers['Authorization'] = 'Bearer $token';
+            if (options.extra['public'] == true) {
+              options.headers.remove('Authorization');
+            } else {
+              final token = await this.store.readToken();
+              if (token != null && token.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $token';
+              }
             }
             handler.next(options);
           } catch (error) {
@@ -89,7 +93,7 @@ class ApiClient {
     if (configured.isNotEmpty) {
       return configured.replaceFirst(RegExp(r'/$'), '');
     }
-    if (kReleaseMode) return 'https://api.hunt1896.app/api/v1';
+    if (kReleaseMode) return 'http://localhost:8080/api/v1';
     final host = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
         ? '10.0.2.2'
         : 'localhost';
@@ -119,11 +123,15 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? query,
     bool public = false,
+    bool withCredentials = false,
   }) async {
     final response = await dio.get<dynamic>(
       path,
       queryParameters: query,
-      options: Options(extra: {'public': public}),
+      // The Web adapter forwards this to XMLHttpRequest.withCredentials.
+      options: Options(
+        extra: {'public': public, 'withCredentials': withCredentials},
+      ),
     );
     final envelope = response.data;
     if (envelope is! Map || envelope['code'] != 0 || envelope['data'] is! Map) {

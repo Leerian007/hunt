@@ -31,8 +31,30 @@
 
   <title>hunt</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { margin: 0; background: #212121; color: #d5bc86; font-family: sans-serif; }
+    #boot { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; }
+    #boot p { color: #adbac1; }
+    #boot button { background: #233039; color: #d5bc86; border: 1px solid #46505a; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
+  </style>
 </head>
 <body>
+  <div id="boot" role="status">
+    <h1>HUNT 1896</h1>
+    <p id="boot-message">正在加载猎人档案…</p>
+    <button id="boot-retry" hidden onclick="location.reload()">重新加载</button>
+  </div>
+  <script>
+    window.showBootError = function() {
+      const message = document.getElementById('boot-message');
+      if (!message) return;
+      message.textContent = '页面资源加载失败，请检查网络后重试。';
+      document.getElementById('boot-retry').hidden = false;
+    };
+    window.addEventListener('flutter-first-frame', function() {
+      document.getElementById('boot')?.remove();
+    }, { once: true });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -41,6 +63,6 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js" async onerror="showBootError()"></script>
 </body>
 </html>

@@ -18,15 +18,17 @@ void main() {
   late List<RequestOptions> requests;
   var unauthorized = false;
   var valid = true;
+  var sessionFlag = 'valid';
   var loginUrlField = 'login_url';
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     requests = [];
     unauthorized = false;
     valid = true;
+    sessionFlag = 'valid';
     loginUrlField = 'login_url';
     client = ApiClient(
-      dio: Dio(BaseOptions(baseUrl: 'https://api.hunt1896.app/api/v1')),
+      dio: Dio(BaseOptions(baseUrl: 'https://localhost:8080/api/v1')),
     );
     client.dio.interceptors.add(
       InterceptorsWrapper(
@@ -51,7 +53,7 @@ void main() {
               loginUrlField: 'https://steamcommunity.com/openid/login?openid.mode=checkid_setup',
             },
             '/auth/session' => {
-              'valid': valid,
+              sessionFlag: valid,
               'steam_id': steamId,
               'expires_at': DateTime.now()
                   .add(const Duration(days: 1))
@@ -98,6 +100,7 @@ void main() {
     await notifier.loginWithSteam();
     expect(requests.single.uri.path, '/api/v1/auth/steam/login-url');
     expect(requests.single.queryParameters['platform'], 'mobile');
+    expect(requests.single.extra['withCredentials'], isTrue);
     expect(launched!.host, 'steamcommunity.com');
     expect(requests.single.headers.containsKey('Authorization'), isFalse);
   });
@@ -107,6 +110,14 @@ void main() {
     final url = await AuthService(client: client).getLoginUrl('web');
     expect(url.host, 'steamcommunity.com');
     expect(requests.single.queryParameters['platform'], 'web');
+    expect(requests.single.extra['withCredentials'], isTrue);
+  });
+
+  test('public login URL never attaches a stored expired token', () async {
+    await client.store.save('expired-token', steamId);
+    await AuthService(client: client).getLoginUrl('web');
+    expect(requests.single.headers.containsKey('Authorization'), isFalse);
+    expect(await client.store.readToken(), 'expired-token');
   });
 
   test(
@@ -144,6 +155,29 @@ void main() {
     expect(await client.store.readToken(), isNull);
     expect(notifier.state.status, AuthStatus.unauthenticated);
     expect(notifier.state.error, isNull);
+  });
+
+  test(
+    'authenticated backend flag restores the session and preserves token',
+    () async {
+      sessionFlag = 'authenticated';
+      final notifier = AuthNotifier(AuthService(client: client));
+      addTearDown(notifier.dispose);
+      await notifier.handleAuthCallback(
+        Uri.parse('hunt1896://auth/steam?token=test-token&steam_id=$steamId'),
+      );
+      expect(notifier.state.status, AuthStatus.authenticated);
+      expect(notifier.state.steamId, steamId);
+      expect(await client.store.readToken(), 'test-token');
+    },
+  );
+
+  test('authenticated false clears an invalid session', () async {
+    sessionFlag = 'authenticated';
+    valid = false;
+    await client.store.save('invalid-token', steamId);
+    expect(await AuthService(client: client).restoreSession(), isNull);
+    expect(await client.store.readToken(), isNull);
   });
 
   test('invalid session is cleared without fetching a summary', () async {

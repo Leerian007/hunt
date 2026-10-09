@@ -9,7 +9,8 @@
    - 返回: {"code": 0, "data": {"login_url": "https://steamcommunity.com/openid/login..."}}
    - 本地后端实测使用 data.url；客户端同时兼容 url 和 login_url。
 2. GET /auth/session (Header: Authorization: Bearer <token>)
-   - 返回: {"code": 0, "data": {"valid": true, "steam_id": "76561198...", "expires_at": "..."}}
+   - 返回: {"code": 0, "data": {"authenticated": true, "steam_id": "76561198...", "expires_at": "..."}}
+   - 浏览器联调确认实际字段为 authenticated；客户端兼容旧 valid 字段，以 authenticated 为优先。
 3. GET /players/{steam_id}/summary (Header: Authorization: Bearer <token>)
    - 返回: {"code": 0, "data": {"steam_id": "...", "persona_name": "...", "avatar_full": "..."}}
 ## 生涯统计和战绩（后端提供的响应结构）

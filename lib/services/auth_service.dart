@@ -23,6 +23,8 @@ class AuthService {
       '/auth/steam/login-url',
       query: {'platform': platform},
       public: true,
+      // Let the browser persist the HttpOnly state cookie before navigation.
+      withCredentials: true,
     );
     final uri = Uri.parse((data['login_url'] ?? data['url']) as String);
     if (uri.scheme != 'https' ||
@@ -67,7 +69,11 @@ class AuthService {
     if (await client.store.readToken() != token) return null;
     final id = data['steam_id'];
     final expiry = DateTime.tryParse(data['expires_at']?.toString() ?? '');
-    if (data['valid'] != true ||
+    // The deployed backend uses authenticated; older API contracts used valid.
+    final authenticated = data.containsKey('authenticated')
+        ? data['authenticated']
+        : data['valid'];
+    if (authenticated != true ||
         id is! String ||
         !RegExp(r'^\d{17}$').hasMatch(id) ||
         expiry == null ||
